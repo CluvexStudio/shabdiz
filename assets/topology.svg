@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 640" width="1800" height="640" role="img" aria-label="shabdiz topology: whatever rides on it hands datagrams to a session, which picks a carrier and crosses the filter to the far side">
+  <defs>
+    <path id="cloud" d="M36,158 C12,158 0,140 0,120 C0,98 16,82 38,82 C40,48 70,22 108,22 C140,22 168,42 178,70 C190,58 208,52 226,56 C252,62 270,84 270,108 C292,104 312,118 316,138 C318,150 310,158 298,158 Z"/>
+    <marker id="s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2B2B2B"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="640" fill="#FBFAF7"/>
+
+  <g font-family="Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif">
+    <text x="36" y="52" font-size="27" font-weight="700" fill="#2B2B2B">shabdiz — how a session crosses</text>
+    <text x="36" y="82" font-size="18" fill="#5A5A5A">One session, four ways out. When the network stops passing one of them, the session takes the next and keeps going.</text>
+
+    <rect x="36" y="200" width="226" height="250" rx="10" fill="#ECEAE6" stroke="#6B6B6B" stroke-width="2"/>
+    <text x="54" y="232" font-size="19" font-weight="600" fill="#3A3A3A">what rides on it</text>
+    <rect x="62" y="250" width="174" height="58" rx="7" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="2"/>
+    <text x="149" y="286" font-size="19" fill="#17324F" text-anchor="middle">an app</text>
+    <rect x="62" y="326" width="174" height="58" rx="7" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="2"/>
+    <text x="149" y="362" font-size="19" fill="#17324F" text-anchor="middle">a tunnel</text>
+
+    <path d="M262 279 H 322" stroke="#2B2B2B" stroke-width="3" fill="none" marker-end="url(#s)"/>
+    <path d="M262 355 V 355 H 322" stroke="#2B2B2B" stroke-width="3" fill="none" marker-end="url(#s)"/>
+
+    <rect x="328" y="240" width="200" height="104" rx="8" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="428" y="276" font-size="22" font-weight="700" fill="#0E1E3C" text-anchor="middle">shabdiz</text>
+    <text x="428" y="302" font-size="16" fill="#142A52" text-anchor="middle">number it, seal it,</text>
+    <text x="428" y="324" font-size="16" fill="#142A52" text-anchor="middle">send it — no queue</text>
+
+    <rect x="572" y="190" width="150" height="248" rx="8" fill="#FFFFFF" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="647" y="218" font-size="17" font-weight="600" fill="#1C3663" text-anchor="middle">carrier</text>
+    <rect x="588" y="234" width="118" height="40" rx="6" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="647" y="260" font-size="17" font-weight="700" fill="#0E1E3C" text-anchor="middle">gre</text>
+    <rect x="588" y="282" width="118" height="40" rx="6" fill="#DCE6F7" stroke="#6B83AE" stroke-width="1.5"/>
+    <text x="647" y="308" font-size="17" fill="#2A3F66" text-anchor="middle">layer-2</text>
+    <rect x="588" y="330" width="118" height="40" rx="6" fill="#DCE6F7" stroke="#6B83AE" stroke-width="1.5"/>
+    <text x="647" y="356" font-size="17" fill="#2A3F66" text-anchor="middle">udp</text>
+    <rect x="588" y="378" width="118" height="40" rx="6" fill="#DCE6F7" stroke="#6B83AE" stroke-width="1.5"/>
+    <text x="647" y="404" font-size="17" fill="#2A3F66" text-anchor="middle">tcp</text>
+
+    <path d="M528 292 H 572" stroke="#2B2B2B" stroke-width="3" fill="none" marker-end="url(#s)"/>
+
+    <g transform="translate(790,214)">
+      <use href="#cloud" fill="#E8A3A3" stroke="#9E3B3B" stroke-width="1.8"/>
+    </g>
+    <text x="948" y="412" font-size="22" font-weight="600" fill="#5E1E1E" text-anchor="middle">filtered network</text>
+
+    <rect x="1158" y="164" width="34" height="332" rx="6" fill="#D96A6A" stroke="#8A2A2A" stroke-width="2"/>
+    <text x="1175" y="146" font-size="21" font-weight="600" fill="#5E1E1E" text-anchor="middle">the filter</text>
+
+    <g transform="translate(1238,214)">
+      <use href="#cloud" fill="#A8C8EE" stroke="#36618E" stroke-width="1.8"/>
+    </g>
+    <text x="1396" y="412" font-size="22" font-weight="600" fill="#153A5E" text-anchor="middle">open internet</text>
+
+    <path d="M722 279 H 1576" stroke="#2B2B2B" stroke-width="4" fill="none"/>
+    <path d="M1576 318 H 722" stroke="#2B2B2B" stroke-width="2.5" stroke-dasharray="8 7" fill="none" marker-end="url(#s)"/>
+
+    <rect x="1576" y="240" width="188" height="104" rx="8" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="1670" y="276" font-size="22" font-weight="700" fill="#0E1E3C" text-anchor="middle">shabdiz</text>
+    <text x="1670" y="302" font-size="16" fill="#142A52" text-anchor="middle">opens it, and counts</text>
+    <text x="1670" y="324" font-size="16" fill="#142A52" text-anchor="middle">what never arrived</text>
+
+    <path d="M60 530 H 128" stroke="#2B2B2B" stroke-width="4" fill="none"/>
+    <text x="142" y="536" font-size="17" fill="#3A3A3A">datagrams — sent and forgotten, so one lost costs that one and nothing behind it</text>
+    <path d="M60 568 H 128" stroke="#2B2B2B" stroke-width="2.5" stroke-dasharray="8 7"/>
+    <text x="142" y="574" font-size="17" fill="#3A3A3A">what came back — each side tells the other what it received, which is how the sender learns the path</text>
+    <text x="142" y="612" font-size="17" fill="#3A3A3A">A stream that must arrive is acked and retried on its own, so only that stream ever waits.</text>
+  </g>
+</svg>

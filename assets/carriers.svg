@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 770" width="1800" height="770" role="img" aria-label="What shabdiz puts on the wire for each carrier, and which part of it the kernel writes">
+  <rect width="1800" height="770" fill="#FBFAF7"/>
+  <g font-family="Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif">
+
+    <text x="36" y="52" font-size="27" font-weight="700" fill="#2B2B2B">shabdiz — what goes on the wire</text>
+    <text x="36" y="82" font-size="18" fill="#5A5A5A">The same datagram, four ways of carrying it. Colour says who wrote each part: the kernel, or us.</text>
+
+    <rect x="36" y="108" width="22" height="22" rx="4" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.5"/>
+    <text x="68" y="126" font-size="16" fill="#3A3A3A">written by the kernel</text>
+    <rect x="252" y="108" width="22" height="22" rx="4" fill="#F0B178" stroke="#8A4418" stroke-width="1.5"/>
+    <text x="284" y="126" font-size="16" fill="#3A3A3A">written by shabdiz</text>
+    <rect x="460" y="108" width="22" height="22" rx="4" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.5"/>
+    <text x="492" y="126" font-size="16" fill="#3A3A3A">in the clear, but authenticated</text>
+    <rect x="760" y="108" width="22" height="22" rx="4" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="1.5"/>
+    <text x="792" y="126" font-size="16" fill="#3A3A3A">encrypted</text>
+
+    <text x="36" y="196" font-size="21" font-weight="700" fill="#1C3663">gre</text>
+    <text x="36" y="220" font-size="15" fill="#6A6A6A">raw IP socket</text>
+    <rect x="260" y="170" width="150" height="56" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.8"/>
+    <text x="335" y="204" font-size="15" font-weight="600" fill="#2B2B2B" text-anchor="middle">IP</text>
+    <rect x="410" y="170" width="90" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="455" y="204" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">GRE</text>
+    <rect x="500" y="170" width="130" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="565" y="204" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">Ethernet</text>
+    <rect x="630" y="170" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="695" y="204" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">session id</text>
+    <rect x="760" y="170" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="825" y="204" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">counter</text>
+    <rect x="890" y="170" width="740" height="56" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="1.8"/>
+    <text x="1260" y="204" font-size="15" font-weight="600" fill="#17324F" text-anchor="middle">payload</text>
+    <rect x="1630" y="170" width="110" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="1685" y="204" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">tag</text>
+    <text x="260" y="252" font-size="16" fill="#4A4A4A">A bridged Ethernet frame inside GRE — the shape of an ordinary site-to-site tunnel. It has no ports, so both ends need a public address.</text>
+
+    <text x="36" y="326" font-size="21" font-weight="700" fill="#1C3663">layer-2</text>
+    <text x="36" y="350" font-size="15" fill="#6A6A6A">straight to the card</text>
+    <rect x="260" y="300" width="130" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="325" y="334" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">Ethernet</text>
+    <rect x="390" y="300" width="150" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="465" y="334" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">IP</text>
+    <rect x="540" y="300" width="190" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="635" y="334" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">TCP, with options</text>
+    <rect x="730" y="300" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="795" y="334" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">session id</text>
+    <rect x="860" y="300" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="925" y="334" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">counter</text>
+    <rect x="990" y="300" width="640" height="56" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="1.8"/>
+    <text x="1310" y="334" font-size="15" font-weight="600" fill="#17324F" text-anchor="middle">payload</text>
+    <rect x="1630" y="300" width="110" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="1685" y="334" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">tag</text>
+    <text x="260" y="382" font-size="16" fill="#4A4A4A">Every header is ours, written to the card itself. No socket owns the port, so the kernel holds no connection — what passes is a TCP stream already in flight.</text>
+
+    <text x="36" y="456" font-size="21" font-weight="700" fill="#1C3663">udp</text>
+    <text x="36" y="480" font-size="15" fill="#6A6A6A">ordinary socket</text>
+    <rect x="260" y="430" width="150" height="56" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.8"/>
+    <text x="335" y="464" font-size="15" font-weight="600" fill="#2B2B2B" text-anchor="middle">IP</text>
+    <rect x="410" y="430" width="110" height="56" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.8"/>
+    <text x="465" y="464" font-size="15" font-weight="600" fill="#2B2B2B" text-anchor="middle">UDP</text>
+    <rect x="520" y="430" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="585" y="464" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">session id</text>
+    <rect x="650" y="430" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="715" y="464" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">counter</text>
+    <rect x="780" y="430" width="850" height="56" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="1.8"/>
+    <text x="1205" y="464" font-size="15" font-weight="600" fill="#17324F" text-anchor="middle">payload</text>
+    <rect x="1630" y="430" width="110" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="1685" y="464" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">tag</text>
+    <text x="260" y="512" font-size="16" fill="#4A4A4A">The plain case. The kernel can cut one write into many packets, so a whole batch leaves in a single call.</text>
+
+    <text x="36" y="586" font-size="21" font-weight="700" fill="#1C3663">tcp</text>
+    <text x="36" y="610" font-size="15" fill="#6A6A6A">ordinary socket</text>
+    <rect x="260" y="560" width="150" height="56" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.8"/>
+    <text x="335" y="594" font-size="15" font-weight="600" fill="#2B2B2B" text-anchor="middle">IP</text>
+    <rect x="410" y="560" width="150" height="56" fill="#E6E2DA" stroke="#8C8577" stroke-width="1.8"/>
+    <text x="485" y="594" font-size="15" font-weight="600" fill="#2B2B2B" text-anchor="middle">TCP</text>
+    <rect x="560" y="560" width="90" height="56" fill="#F0B178" stroke="#8A4418" stroke-width="1.8"/>
+    <text x="605" y="594" font-size="15" font-weight="600" fill="#3A1A06" text-anchor="middle">length</text>
+    <rect x="650" y="560" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="715" y="594" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">session id</text>
+    <rect x="780" y="560" width="130" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="845" y="594" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">counter</text>
+    <rect x="910" y="560" width="720" height="56" fill="#CFE2F3" stroke="#3B6EA5" stroke-width="1.8"/>
+    <text x="1270" y="594" font-size="15" font-weight="600" fill="#17324F" text-anchor="middle">payload</text>
+    <rect x="1630" y="560" width="110" height="56" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="1.8"/>
+    <text x="1685" y="594" font-size="15" font-weight="600" fill="#0E1E3C" text-anchor="middle">tag</text>
+    <text x="260" y="642" font-size="16" fill="#4A4A4A">Works wherever anything works. A length says where each datagram ends, because the stream itself has no edges.</text>
+
+    <line x1="36" y1="678" x2="1764" y2="678" stroke="#D8D2C6" stroke-width="1.5"/>
+    <text x="36" y="710" font-size="16" fill="#4A4A4A">The id and the counter ride in the open, so the far side can tell sessions apart and see what is missing — but the tag is taken over them as well as over the payload, so neither can be altered.</text>
+    <text x="36" y="736" font-size="16" fill="#4A4A4A">Nothing else is readable, and a gap in the counter is a lost datagram: the measurement is already there, with nothing extra to send and nothing to ask for.</text>
+  </g>
+</svg>

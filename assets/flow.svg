@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1040" width="1500" height="1040" role="img" aria-label="A shabdiz session step by step: the handshake, datagrams in flight, a stream that must arrive, loss reported back, and the carrier changing">
+  <defs>
+    <marker id="f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2B2B2B"/>
+    </marker>
+    <marker id="fr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#B9342F"/>
+    </marker>
+  </defs>
+  <rect width="1500" height="1040" fill="#FBFAF7"/>
+  <g font-family="Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif">
+
+    <text x="36" y="46" font-size="26" font-weight="700" fill="#2B2B2B">shabdiz — one session, from the first packet</text>
+
+    <line x1="300" y1="118" x2="300" y2="926" stroke="#9A9A9A" stroke-width="1.5"/>
+    <line x1="1200" y1="118" x2="1200" y2="926" stroke="#9A9A9A" stroke-width="1.5"/>
+
+    <rect x="180" y="70" width="240" height="48" rx="7" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="300" y="100" font-size="18" font-weight="600" fill="#0E1E3C" text-anchor="middle">the side that speaks first</text>
+    <rect x="1080" y="70" width="240" height="48" rx="7" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="1200" y="100" font-size="18" font-weight="600" fill="#0E1E3C" text-anchor="middle">the side that answers</text>
+
+    <line x1="300" y1="170" x2="1192" y2="170" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="746" y="162" font-size="15" fill="#2B2B2B" text-anchor="middle">hello — my static key, and proof I know the token</text>
+    <line x1="1200" y1="212" x2="308" y2="212" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="754" y="204" font-size="15" fill="#2B2B2B" text-anchor="middle">hello back — and the largest datagram either of us will send</text>
+
+    <rect x="560" y="234" width="380" height="54" rx="5" fill="#FFFFFF" stroke="#2F4E8C" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="750" y="256" font-size="15" font-weight="600" fill="#1C3663" text-anchor="middle">each end keeps the other's key pinned</text>
+    <text x="750" y="276" font-size="15" fill="#2A3F66" text-anchor="middle">everything after this is sealed, one key per direction</text>
+
+    <line x1="300" y1="330" x2="1192" y2="330" stroke="#2B2B2B" stroke-width="2.5" marker-end="url(#f)"/>
+    <text x="746" y="322" font-size="15" fill="#2B2B2B" text-anchor="middle">datagram, counter 1</text>
+    <line x1="300" y1="368" x2="1192" y2="368" stroke="#2B2B2B" stroke-width="2.5" marker-end="url(#f)"/>
+    <text x="746" y="360" font-size="15" fill="#2B2B2B" text-anchor="middle">datagram, counter 2</text>
+
+    <line x1="300" y1="406" x2="820" y2="406" stroke="#B9342F" stroke-width="2.5" stroke-dasharray="10 6"/>
+    <circle cx="840" cy="406" r="11" fill="none" stroke="#B9342F" stroke-width="2.5"/>
+    <path d="M833 399 L 847 413 M847 399 L 833 413" stroke="#B9342F" stroke-width="2.5"/>
+    <text x="560" y="398" font-size="15" fill="#B9342F" text-anchor="middle">datagram, counter 3</text>
+    <text x="900" y="412" font-size="15" fill="#B9342F">the path ate it</text>
+
+    <line x1="300" y1="450" x2="1192" y2="450" stroke="#2B2B2B" stroke-width="2.5" marker-end="url(#f)"/>
+    <text x="746" y="442" font-size="15" fill="#2B2B2B" text-anchor="middle">datagram, counter 4 — and the one behind it never waited</text>
+
+    <rect x="1010" y="476" width="380" height="54" rx="5" fill="#FFFFFF" stroke="#2F4E8C" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="1200" y="498" font-size="15" font-weight="600" fill="#1C3663" text-anchor="middle">3 is missing from the count</text>
+    <text x="1200" y="518" font-size="15" fill="#2A3F66" text-anchor="middle">nothing was asked for, nothing was sent</text>
+
+    <line x1="1200" y1="570" x2="308" y2="570" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="754" y="562" font-size="15" fill="#2B2B2B" text-anchor="middle">what I received, and what I did not — so you can see the direction you send into</text>
+
+    <line x1="36" y1="606" x2="1464" y2="606" stroke="#D8D2C6" stroke-width="1.5"/>
+    <text x="36" y="636" font-size="16" font-weight="600" fill="#1C3663">a stream, for the traffic that must arrive</text>
+
+    <line x1="300" y1="676" x2="1192" y2="676" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="746" y="668" font-size="15" fill="#2B2B2B" text-anchor="middle">open stream 1, bytes at offset 0</text>
+    <line x1="300" y1="714" x2="700" y2="714" stroke="#B9342F" stroke-width="2" stroke-dasharray="10 6"/>
+    <circle cx="720" cy="714" r="11" fill="none" stroke="#B9342F" stroke-width="2.5"/>
+    <path d="M713 707 L 727 721 M727 707 L 713 721" stroke="#B9342F" stroke-width="2.5"/>
+    <text x="500" y="706" font-size="15" fill="#B9342F" text-anchor="middle">stream 1, next bytes</text>
+    <line x1="1200" y1="758" x2="308" y2="758" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="754" y="750" font-size="15" fill="#2B2B2B" text-anchor="middle">stream 1 — I have up to this offset</text>
+    <line x1="300" y1="796" x2="1192" y2="796" stroke="#2B2B2B" stroke-width="2" marker-end="url(#f)"/>
+    <text x="746" y="788" font-size="15" fill="#2B2B2B" text-anchor="middle">stream 1, the missing bytes again — and only stream 1 ever waited</text>
+
+    <line x1="36" y1="836" x2="1464" y2="836" stroke="#B9342F" stroke-width="1.5" stroke-dasharray="8 6"/>
+    <text x="36" y="828" font-size="16" font-weight="600" fill="#B9342F">and when the path stops passing this carrier at all</text>
+
+    <rect x="500" y="856" width="500" height="54" rx="5" fill="#FFFFFF" stroke="#B9342F" stroke-width="1.6" stroke-dasharray="6 4"/>
+    <text x="750" y="878" font-size="15" font-weight="600" fill="#7A211D" text-anchor="middle">the session is the same; only the carrier under it changes</text>
+    <text x="750" y="898" font-size="15" fill="#7A211D" text-anchor="middle">gre, layer-2, udp or tcp — whichever is still getting through</text>
+
+    <rect x="180" y="950" width="240" height="48" rx="7" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="300" y="980" font-size="18" font-weight="600" fill="#0E1E3C" text-anchor="middle">the side that speaks first</text>
+    <rect x="1080" y="950" width="240" height="48" rx="7" fill="#7FA0E0" stroke="#2F4E8C" stroke-width="2"/>
+    <text x="1200" y="980" font-size="18" font-weight="600" fill="#0E1E3C" text-anchor="middle">the side that answers</text>
+  </g>
+</svg>

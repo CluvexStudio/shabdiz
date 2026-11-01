@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>shabdiz — banner</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=IBM+Plex+Mono:wght@400;500&family=Vazirmatn:wght@400&display=swap">
+<style>
+  html, body { margin: 0; padding: 0; background: #070910; }
+  .board {
+    width: 1280px; height: 640px; position: relative; overflow: hidden;
+    background: #070910; font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  .glow { position: absolute; inset: 0; background: radial-gradient(120% 86% at 86% 62%, #141C33 0%, #070910 64%); }
+  .scrim { position: absolute; left: 0; top: 0; bottom: 0; width: 60%;
+    background: linear-gradient(90deg, #070910 0%, #070910 56%, rgba(7,9,16,0.84) 82%, rgba(7,9,16,0) 100%); }
+  .copy { position: absolute; left: 76px; top: 72px; right: 520px; }
+  .name { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 112px;
+    line-height: 1; letter-spacing: 0.07em; color: #E4EAF7; }
+  .kicker { margin-top: 16px; font-size: 15px; font-weight: 500; letter-spacing: 0.34em; color: #8FAEF0; }
+  .rule { margin-top: 26px; width: 92px; height: 2px; background: #5C7BC4; }
+  .lede { margin: 22px 0 0; font-size: 19px; line-height: 1.62; color: #B9C4DA; max-width: 580px; }
+  .chips { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip { font-size: 13px; font-weight: 500; letter-spacing: 0.04em; color: #DCE4F4;
+    border: 1px solid #263355; border-radius: 3px; padding: 7px 12px; }
+  .seal { position: absolute; left: 76px; bottom: 54px; right: 76px; text-align: left;
+    font-family: Vazirmatn, 'Noto Naskh Arabic', serif; font-size: 17px; line-height: 1.8;
+    color: #98AAC9; direction: rtl; unicode-bidi: isolate; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="glow" aria-hidden="true"></div>
+  <div id="sky" aria-hidden="true"></div>
+  <div id="field" aria-hidden="true"></div>
+  <div class="scrim" aria-hidden="true"></div>
+
+  <div class="copy">
+    <div class="name">SHABDIZ</div>
+    <div class="kicker">A DATAGRAM PROTOCOL</div>
+    <div class="rule"></div>
+    <p class="lede">For networks that fight back. Direct or tunnelled, one server or many:
+      nothing waits in line, and loss is read straight off the wire.</p>
+    <div class="chips">
+      <span class="chip">gre · layer&#8209;2 · udp · tcp</span>
+      <span class="chip">no head-of-line blocking</span>
+      <span class="chip">Noise IKpsk2 · AES-256-GCM</span>
+    </div>
+  </div>
+
+  <div class="seal">شبدیز، اسبِ خسروپرویز؛ شب‌رنگ و تندترینِ روزگارش</div>
+</div>
+
+<script>
+  const accent = '#8FAEF0';
+  const sky = document.getElementById('sky');
+  const field = document.getElementById('field');
+  const add = (host, css) => { const d = document.createElement('div'); d.style.cssText = css; host.appendChild(d); };
+
+  let seed = 20260101;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+
+  for (let i = 0; i < 68; i++) {
+    const x = 24 + rnd() * 76, y = 6 + rnd() * 88, r = rnd();
+    const size = r > 0.93 ? 2.6 : r > 0.72 ? 1.8 : 1.2;
+    add(sky, `position:absolute;left:${x.toFixed(2)}%;top:${y.toFixed(2)}%;width:${size}px;height:${size}px;border-radius:50%;background:#D7E0F2;opacity:${(0.14 + r * 0.46).toFixed(2)}`);
+  }
+
+  const herd = 7;
+  for (let i = 0; i < herd; i++) {
+    const t = i / (herd - 1);
+    const top = 30 + t * 42;
+    const reach = 18 + (1 - Math.abs(t - 0.5) * 2) * 26 + rnd() * 10;
+    add(field, `position:absolute;left:46%;top:${top.toFixed(2)}%;width:${reach.toFixed(1)}%;height:2px;background:linear-gradient(90deg, rgba(143,174,240,0) 0%, ${accent} 100%);opacity:.32`);
+  }
+
+  add(field, `position:absolute;left:34%;top:50%;width:60%;height:3px;border-radius:2px;background:linear-gradient(90deg, rgba(143,174,240,0) 0%, ${accent} 86%, #EAF0FF 100%);transform:translateY(-50%)`);
+  add(field, `position:absolute;left:93.4%;top:50%;width:9px;height:9px;border-radius:50%;background:#F2F6FF;box-shadow:0 0 18px 5px rgba(143,174,240,.55);transform:translate(-50%,-50%)`);
+</script>
+</body>
+</html>

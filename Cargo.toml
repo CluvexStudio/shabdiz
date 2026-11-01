@@ -1,0 +1,25 @@
+[package]
+name = "shabdiz"
+version = "0.1.0"
+edition = "2021"
+description = "A datagram and stream transport for policed network paths"
+license = "AGPL-3.0-only"
+repository = "https://github.com/CluvexStudio/shabdiz"
+keywords = ["network", "transport", "udp", "protocol", "censorship"]
+categories = ["network-programming"]
+
+[dependencies]
+tokio = { version = "=1.54.1", features = ["rt", "net", "io-util", "macros", "sync", "time"] }
+async-trait = "=0.1.92"
+anyhow = "=1.0.104"
+ring = "=0.17.14"
+blake3 = "=1.8.7"
+snow = { version = "=0.10.0", features = ["ring-accelerated", "risky-raw-split"] }
+tracing = "=0.1.44"
+libc = "=0.2.191"
+socket2 = "=0.6.5"
+quinn-udp = "=0.6.3"
+
+[dev-dependencies]
+anyhow = "=1.0.104"
+tokio = { version = "=1.54.1", features = ["rt-multi-thread", "macros", "time"] }

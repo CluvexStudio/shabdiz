@@ -1,0 +1,8 @@
+/target
+*.pcap
+*.bin
+.DS_Store
+notes-local/
+*.local.md
+__pycache__/
+*.pyc
