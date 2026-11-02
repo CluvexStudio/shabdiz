@@ -69,7 +69,7 @@ shabdiz = { git = "https://github.com/CluvexStudio/shabdiz" }
 ```
 
 ```rust
-let carrier = Arc::new(shabdiz::carrier::udp::Udp::bind("0.0.0.0:7000", peer)?);
+let carrier = Arc::new(shabdiz::carrier::udp::Udp::bind("0.0.0.0:7000".parse()?).await?);
 let accepted = shabdiz::handshake::accept(&*carrier, &local_key, &peer_key, &psk).await?;
 let session = shabdiz::session::start(
     carrier,

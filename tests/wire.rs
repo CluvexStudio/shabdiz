@@ -22,7 +22,7 @@ fn session_frames_round_trip() {
     let cases: Vec<Frame> = vec![
         Frame::Data {
             flow: 0,
-            payload: b"hysteria2 datagram",
+            payload: b"a datagram payload",
         },
         Frame::Data {
             flow: 7,
