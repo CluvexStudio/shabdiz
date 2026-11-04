@@ -74,6 +74,12 @@ impl Gre {
         }
         let fd = unsafe { OwnedFd::from_raw_fd(raw) };
         rawfd::set_opt(fd.as_raw_fd(), libc::SOL_SOCKET, libc::SO_RCVBUF, RECV_BUF)?;
+        let _ = rawfd::set_opt(
+            fd.as_raw_fd(),
+            libc::IPPROTO_IP,
+            libc::IP_MTU_DISCOVER,
+            libc::IP_PMTUDISC_DO,
+        );
         let sa = libc::sockaddr_in {
             sin_family: libc::AF_INET as libc::sa_family_t,
             sin_port: 0,

@@ -12,6 +12,7 @@ pub struct Pipe {
     out: UnboundedSender<Vec<u8>>,
     inbox: Mutex<UnboundedReceiver<Vec<u8>>>,
     mtu: usize,
+    limit: usize,
     sends: AtomicUsize,
     drop_sends: Vec<usize>,
     pub delivered: AtomicUsize,
@@ -26,6 +27,9 @@ impl Carrier for Pipe {
             return Ok(());
         }
         if self.drop_sends.contains(&n) {
+            return Ok(());
+        }
+        if datagram.len() > self.limit {
             return Ok(());
         }
         self.delivered.fetch_add(1, SeqCst);
@@ -72,7 +76,18 @@ impl Pipe {
     }
 }
 
+#[allow(dead_code)]
 pub fn pair(mtu: usize, drop_a: Vec<usize>, drop_b: Vec<usize>) -> (Arc<Pipe>, Arc<Pipe>) {
+    pair_limited(mtu, usize::MAX, drop_a, drop_b)
+}
+
+#[allow(dead_code)]
+pub fn pair_limited(
+    mtu: usize,
+    limit: usize,
+    drop_a: Vec<usize>,
+    drop_b: Vec<usize>,
+) -> (Arc<Pipe>, Arc<Pipe>) {
     let (a_tx, b_rx) = unbounded_channel();
     let (b_tx, a_rx) = unbounded_channel();
     let a = Arc::new(Pipe {
@@ -80,6 +95,7 @@ pub fn pair(mtu: usize, drop_a: Vec<usize>, drop_b: Vec<usize>) -> (Arc<Pipe>, A
         out: a_tx,
         inbox: Mutex::new(a_rx),
         mtu,
+        limit,
         sends: AtomicUsize::new(0),
         drop_sends: drop_a,
         delivered: AtomicUsize::new(0),
@@ -90,6 +106,7 @@ pub fn pair(mtu: usize, drop_a: Vec<usize>, drop_b: Vec<usize>) -> (Arc<Pipe>, A
         out: b_tx,
         inbox: Mutex::new(b_rx),
         mtu,
+        limit,
         sends: AtomicUsize::new(0),
         drop_sends: drop_b,
         delivered: AtomicUsize::new(0),

@@ -10,6 +10,19 @@ use super::{Batch, Carrier, Pacer, BATCH};
 
 const RECV_BUF: usize = 8 * 1024 * 1024;
 
+fn dont_fragment(sock: &tokio::net::UdpSocket) {
+    use std::os::fd::AsRawFd;
+    let (level, name, value) = match sock.local_addr().map(|a| a.is_ipv4()) {
+        Ok(true) => (libc::IPPROTO_IP, libc::IP_MTU_DISCOVER, libc::IP_PMTUDISC_DO),
+        _ => (
+            libc::IPPROTO_IPV6,
+            libc::IPV6_MTU_DISCOVER,
+            libc::IP_PMTUDISC_DO,
+        ),
+    };
+    let _ = super::rawfd::set_opt(sock.as_raw_fd(), level, name, value);
+}
+
 pub struct Udp {
     sock: Arc<tokio::net::UdpSocket>,
     state: UdpSocketState,
@@ -30,6 +43,7 @@ impl Udp {
         let sock = tokio::net::UdpSocket::bind(local).await?;
         let state = UdpSocketState::new(UdpSockRef::from(&sock))?;
         let _ = state.set_recv_buffer_size(UdpSockRef::from(&sock), RECV_BUF);
+        dont_fragment(&sock);
         let gso = state.max_gso_segments().max(1);
         let mtu = 1472;
         Ok(Udp {

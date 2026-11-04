@@ -16,6 +16,8 @@ pub const T_CLOSE: u8 = 0x05;
 pub const T_TOOBIG: u8 = 0x06;
 pub const T_STAT: u8 = 0x07;
 pub const T_PAD: u8 = 0x08;
+pub const T_PROBE: u8 = 0x09;
+pub const T_PROBEACK: u8 = 0x0a;
 pub const T_SOPEN: u8 = 0x10;
 pub const T_SDATA: u8 = 0x11;
 pub const T_SACK: u8 = 0x12;
@@ -28,6 +30,11 @@ pub const HS_MSG2: u8 = 2;
 pub const DATA_HDR: usize = 3;
 pub const SDATA_HDR: usize = 13;
 pub const SACK_RANGES: usize = 4;
+pub const PROBE_HDR: usize = 5;
+
+pub fn probe_fill(payload: usize) -> usize {
+    (payload + DATA_HDR).saturating_sub(PROBE_HDR)
+}
 
 pub fn payload_mtu(carrier_mtu: usize) -> usize {
     carrier_mtu.saturating_sub(OVERHEAD + DATA_HDR)
@@ -135,6 +142,15 @@ pub enum Frame<'a> {
     },
     Stat(Stat),
     Pad,
+    Probe {
+        seq: u16,
+        payload: u16,
+        fill: &'a [u8],
+    },
+    ProbeAck {
+        seq: u16,
+        payload: u16,
+    },
     SOpen {
         sid: u32,
         kind: StreamKind,
@@ -208,6 +224,17 @@ impl Frame<'_> {
                 out.extend_from_slice(&s.jitter_us.to_be_bytes());
             }
             Frame::Pad => out.push(T_PAD),
+            Frame::Probe { seq, payload, fill } => {
+                out.push(T_PROBE);
+                out.extend_from_slice(&seq.to_be_bytes());
+                out.extend_from_slice(&payload.to_be_bytes());
+                out.extend_from_slice(fill);
+            }
+            Frame::ProbeAck { seq, payload } => {
+                out.push(T_PROBEACK);
+                out.extend_from_slice(&seq.to_be_bytes());
+                out.extend_from_slice(&payload.to_be_bytes());
+            }
             Frame::SOpen { sid, kind, target } => {
                 out.push(T_SOPEN);
                 out.extend_from_slice(&sid.to_be_bytes());
@@ -273,6 +300,15 @@ impl Frame<'_> {
                 jitter_us: be32(b, 16)?,
             })),
             T_PAD => Some(Frame::Pad),
+            T_PROBE => Some(Frame::Probe {
+                seq: be16(b, 0)?,
+                payload: be16(b, 2)?,
+                fill: b.get(4..)?,
+            }),
+            T_PROBEACK => Some(Frame::ProbeAck {
+                seq: be16(b, 0)?,
+                payload: be16(b, 2)?,
+            }),
             T_SOPEN => Some(Frame::SOpen {
                 sid: be32(b, 0)?,
                 kind: StreamKind::from_code(*b.get(4)?)?,

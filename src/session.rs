@@ -1,5 +1,5 @@
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering::Relaxed};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, AtomicUsize, Ordering::Relaxed};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -37,6 +37,70 @@ impl Default for Config {
 pub fn now_us() -> u64 {
     static EPOCH: OnceLock<Instant> = OnceLock::new();
     EPOCH.get_or_init(Instant::now).elapsed().as_micros() as u64
+}
+
+pub const PROBE_FLOOR: usize = 508;
+pub const PROBE_TRIES: usize = 3;
+pub const PROBE_WAIT: Duration = Duration::from_millis(200);
+pub const PROBE_ROUNDS: usize = 6;
+pub const PROBE_RETRIES: usize = 8;
+
+pub struct Mtu {
+    payload: AtomicUsize,
+    assumed: usize,
+    probed: AtomicBool,
+    ack: AtomicU64,
+    seq: AtomicU32,
+}
+
+impl Mtu {
+    fn new(assumed: usize) -> Mtu {
+        Mtu {
+            payload: AtomicUsize::new(assumed),
+            assumed,
+            probed: AtomicBool::new(false),
+            ack: AtomicU64::new(0),
+            seq: AtomicU32::new(0),
+        }
+    }
+
+    pub fn payload(&self) -> usize {
+        self.payload.load(Relaxed)
+    }
+
+    pub fn assumed(&self) -> usize {
+        self.assumed
+    }
+
+    pub fn probed(&self) -> bool {
+        self.probed.load(Relaxed)
+    }
+
+    fn cap(&self, to: usize) {
+        if to >= PROBE_FLOOR {
+            self.payload.fetch_min(to, Relaxed);
+        }
+    }
+
+    fn record(&self, seq: u16, payload: u16) {
+        self.ack
+            .fetch_max((u64::from(seq) << 16) | u64::from(payload), Relaxed);
+    }
+
+    fn newest(&self) -> (u16, u16) {
+        let v = self.ack.load(Relaxed);
+        ((v >> 16) as u16, v as u16)
+    }
+}
+
+enum Round {
+    Fits,
+    TooBig,
+    NoSignal,
+}
+
+pub fn too_big(e: &std::io::Error) -> bool {
+    e.raw_os_error() == Some(libc::EMSGSIZE)
 }
 
 struct Ring<T> {
@@ -153,7 +217,7 @@ pub struct Handle {
     out: Arc<Ring<Vec<u8>>>,
     inbox: Arc<Ring<(u16, Vec<u8>)>>,
     stats: Arc<Stats>,
-    payload_mtu: usize,
+    mtu: Arc<Mtu>,
 }
 
 impl Handle {
@@ -195,7 +259,20 @@ impl Handle {
     }
 
     pub fn payload_mtu(&self) -> usize {
-        self.payload_mtu
+        self.mtu.payload()
+    }
+
+    pub fn mtu(&self) -> &Mtu {
+        &self.mtu
+    }
+
+    pub async fn mtu_settled(&self) -> usize {
+        let budget =
+            Instant::now() + PROBE_WAIT * (PROBE_ROUNDS + PROBE_RETRIES + 3).max(1) as u32;
+        while !self.mtu.probed() && Instant::now() < budget && !self.inbox.is_closed() {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        self.mtu.payload()
     }
 
     pub fn snapshot(&self) -> Snapshot {
@@ -247,14 +324,16 @@ pub fn start(
         stats: Arc::new(Stats::default()),
         out: Arc::new(Ring::new(cfg.ring)),
         inbox: Arc::new(Ring::new(cfg.ring)),
+        mtu: Arc::new(Mtu::new(params.payload_mtu as usize)),
     };
     let handle = Handle {
         out: parts.out.clone(),
         inbox: parts.inbox.clone(),
         stats: parts.stats.clone(),
-        payload_mtu: params.payload_mtu as usize,
+        mtu: parts.mtu.clone(),
     };
     tokio::spawn(send_loop(parts.clone(), cfg, role));
+    tokio::spawn(probe_loop(parts.clone()));
     tokio::spawn(recv_loop(parts, cfg, hs));
     handle
 }
@@ -266,6 +345,104 @@ struct Parts {
     stats: Arc<Stats>,
     out: Arc<Ring<Vec<u8>>>,
     inbox: Arc<Ring<(u16, Vec<u8>)>>,
+    mtu: Arc<Mtu>,
+}
+
+async fn probe_loop(parts: Parts) {
+    let Parts {
+        out,
+        inbox,
+        mtu,
+        ..
+    } = parts;
+    let mtu = &mtu;
+    let ceiling = mtu.assumed();
+    if ceiling <= PROBE_FLOOR {
+        mtu.probed.store(true, Relaxed);
+        return;
+    }
+
+    let send = |size: usize| -> u16 {
+        let seq = (mtu.seq.fetch_add(1, Relaxed) + 1) as u16;
+        let fill = vec![0u8; wire::probe_fill(size)];
+        for _ in 0..PROBE_TRIES {
+            let mut inner = Vec::with_capacity(wire::PROBE_HDR + fill.len());
+            Frame::Probe {
+                seq,
+                payload: size as u16,
+                fill: &fill,
+            }
+            .write(&mut inner);
+            out.push(inner);
+        }
+        seq
+    };
+
+    let (mut lo, mut hi) = (0usize, ceiling + 1);
+    let mut rounds = PROBE_ROUNDS;
+    let mut retries = PROBE_RETRIES;
+    let mut candidate = ceiling;
+    let mut doubted: Option<usize> = None;
+
+    while !inbox.is_closed() {
+        let control = send(PROBE_FLOOR);
+        let probe = send(candidate);
+        tokio::time::sleep(PROBE_WAIT).await;
+        let (seen, _) = mtu.newest();
+        let outcome = if seen >= probe {
+            Round::Fits
+        } else if seen >= control {
+            Round::TooBig
+        } else {
+            Round::NoSignal
+        };
+        match outcome {
+            Round::Fits => {
+                doubted = None;
+                lo = candidate;
+                mtu.payload.store(lo.min(ceiling), Relaxed);
+                if candidate == ceiling || hi - lo <= 1 {
+                    break;
+                }
+            }
+            Round::TooBig if doubted != Some(candidate) => {
+                doubted = Some(candidate);
+                if retries == 0 {
+                    break;
+                }
+                retries -= 1;
+                continue;
+            }
+            Round::TooBig => {
+                doubted = None;
+                hi = candidate;
+                if hi.saturating_sub(lo.max(PROBE_FLOOR)) <= 1 {
+                    break;
+                }
+            }
+            Round::NoSignal => {
+                if retries == 0 {
+                    break;
+                }
+                retries -= 1;
+                continue;
+            }
+        }
+        if rounds == 0 {
+            break;
+        }
+        rounds -= 1;
+        let bottom = lo.max(PROBE_FLOOR);
+        candidate = bottom + (hi.saturating_sub(bottom)) / 2;
+        if candidate <= bottom || candidate >= hi {
+            break;
+        }
+    }
+
+    if lo > 0 {
+        mtu.payload.store(lo.min(ceiling), Relaxed);
+    }
+    mtu.probed.store(true, Relaxed);
 }
 
 async fn send_loop(parts: Parts, cfg: Config, role: Role) {
@@ -275,6 +452,7 @@ async fn send_loop(parts: Parts, cfg: Config, role: Role) {
         stats,
         out,
         inbox,
+        ..
     } = parts;
     let mut dg = Vec::with_capacity(1500);
     let stride = carrier.mtu() + crypto::Keys::overhead();
@@ -303,10 +481,12 @@ async fn send_loop(parts: Parts, cfg: Config, role: Role) {
                         stats.tx_datagrams.fetch_add(n as u64, Relaxed);
                         stats.tx_bytes.fetch_add(bytes, Relaxed);
                     }
-                    Err(_) => {
+                    Err(e) => {
                         stats.tx_errors.fetch_add(1, Relaxed);
-                        inbox.close();
-                        return;
+                        if !too_big(&e) {
+                            inbox.close();
+                            return;
+                        }
                     }
                 }
             }
@@ -316,10 +496,12 @@ async fn send_loop(parts: Parts, cfg: Config, role: Role) {
                         stats.tx_datagrams.fetch_add(1, Relaxed);
                         stats.tx_bytes.fetch_add(one.len() as u64, Relaxed);
                     }
-                    Err(_) => {
+                    Err(e) => {
                         stats.tx_errors.fetch_add(1, Relaxed);
-                        inbox.close();
-                        return;
+                        if !too_big(&e) {
+                            inbox.close();
+                            return;
+                        }
                     }
                 }
             }
@@ -356,6 +538,7 @@ async fn recv_loop(parts: Parts, cfg: Config, hs: Option<Handshake>) {
         stats,
         out,
         inbox,
+        mtu,
     } = parts;
     let mut buf = vec![0u8; 2048];
     let mut rx = Rx::new();
@@ -401,7 +584,24 @@ async fn recv_loop(parts: Parts, cfg: Config, hs: Option<Handshake>) {
 
         let inner = Keys::inner(&buf[..n], len);
         match Frame::parse(inner) {
-            Some(Frame::Data { flow, payload }) => inbox.push((flow, payload.to_vec())),
+            Some(Frame::Data { flow, payload }) => {
+                if payload.len() > mtu.assumed() {
+                    let mut big = Vec::with_capacity(3);
+                    Frame::TooBig {
+                        mtu: mtu.assumed().min(u16::MAX as usize) as u16,
+                    }
+                    .write(&mut big);
+                    out.push(big);
+                }
+                inbox.push((flow, payload.to_vec()));
+            }
+            Some(Frame::Probe { seq, payload, .. }) => {
+                let mut ack = Vec::with_capacity(wire::PROBE_HDR);
+                Frame::ProbeAck { seq, payload }.write(&mut ack);
+                out.push(ack);
+            }
+            Some(Frame::ProbeAck { seq, payload }) => mtu.record(seq, payload),
+            Some(Frame::TooBig { mtu: cap }) => mtu.cap(cap as usize),
             Some(Frame::Ping { tx_ts }) => {
                 let rx_ts = now_us();
                 jitter.sample(tx_ts as i64, rx_ts as i64);
