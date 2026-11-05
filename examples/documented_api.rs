@@ -15,7 +15,10 @@ async fn the_documented_api(
         accepted.params,
         shabdiz::session::Role::Responder,
         shabdiz::session::Config::default(),
-        Some(shabdiz::session::Handshake { first: accepted.first, reply: accepted.reply }),
+        Some(shabdiz::session::Handshake {
+            first: accepted.first,
+            reply: accepted.reply,
+        }),
     );
 
     session.send(flow, b"a datagram");

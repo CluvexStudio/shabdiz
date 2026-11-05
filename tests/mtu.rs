@@ -68,7 +68,11 @@ async fn a_path_that_carries_what_the_carrier_claims_is_left_alone() {
     let assumed = d.mtu().assumed();
     assert_eq!(assumed, wire::payload_mtu(CARRIER_MTU));
 
-    assert_eq!(d.mtu_settled().await, assumed, "no probe should shrink this");
+    assert_eq!(
+        d.mtu_settled().await,
+        assumed,
+        "no probe should shrink this"
+    );
     assert_eq!(r.mtu_settled().await, assumed);
     assert!(d.mtu().probed(), "the probe ran and settled");
 }

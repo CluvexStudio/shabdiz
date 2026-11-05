@@ -13,7 +13,11 @@ const RECV_BUF: usize = 8 * 1024 * 1024;
 fn dont_fragment(sock: &tokio::net::UdpSocket) {
     use std::os::fd::AsRawFd;
     let (level, name, value) = match sock.local_addr().map(|a| a.is_ipv4()) {
-        Ok(true) => (libc::IPPROTO_IP, libc::IP_MTU_DISCOVER, libc::IP_PMTUDISC_DO),
+        Ok(true) => (
+            libc::IPPROTO_IP,
+            libc::IP_MTU_DISCOVER,
+            libc::IP_PMTUDISC_DO,
+        ),
         _ => (
             libc::IPPROTO_IPV6,
             libc::IPV6_MTU_DISCOVER,

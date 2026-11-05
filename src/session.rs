@@ -267,8 +267,7 @@ impl Handle {
     }
 
     pub async fn mtu_settled(&self) -> usize {
-        let budget =
-            Instant::now() + PROBE_WAIT * (PROBE_ROUNDS + PROBE_RETRIES + 3).max(1) as u32;
+        let budget = Instant::now() + PROBE_WAIT * (PROBE_ROUNDS + PROBE_RETRIES + 3).max(1) as u32;
         while !self.mtu.probed() && Instant::now() < budget && !self.inbox.is_closed() {
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
@@ -350,10 +349,7 @@ struct Parts {
 
 async fn probe_loop(parts: Parts) {
     let Parts {
-        out,
-        inbox,
-        mtu,
-        ..
+        out, inbox, mtu, ..
     } = parts;
     let mtu = &mtu;
     let ceiling = mtu.assumed();
