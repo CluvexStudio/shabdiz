@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  ZIG_VERSION: 0.14.1
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  # The carriers reach for raw sockets and per-architecture packet layout, so
+  # the crate is built for every architecture rakhsh publishes rather than
+  # trusting that x86_64 passing means the rest do.
+  arch:
+    name: ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ !matrix.required }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { arch: x86_64, target: x86_64-unknown-linux-musl, required: true }
+          - { arch: aarch64, target: aarch64-unknown-linux-musl, required: true }
+          - { arch: armv7, target: armv7-unknown-linux-musleabihf, required: true }
+          - { arch: i686, target: i686-unknown-linux-musl, required: true }
+          - { arch: armv6, target: arm-unknown-linux-musleabi, required: true }
+          - { arch: riscv64, target: riscv64gc-unknown-linux-musl, required: true }
+          - { arch: loongarch64, target: loongarch64-unknown-linux-musl, required: false }
+          - { arch: ppc64le, target: powerpc64le-unknown-linux-musl, required: false }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - run: cargo zigbuild --release --target ${{ matrix.target }}
