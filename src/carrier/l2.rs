@@ -49,7 +49,7 @@ pub struct L2 {
     seq: AtomicU32,
     ip_id: AtomicU32,
     ts: AtomicU32,
-    rst_rule: Option<String>,
+    rst_rule: Option<RstRule>,
     pacer: Pacer,
 }
 
@@ -301,28 +301,14 @@ impl L2 {
 
 impl Drop for L2 {
     fn drop(&mut self) {
-        if let Some(tag) = self.rst_rule.take() {
-            let _ = std::process::Command::new("iptables")
-                .args([
-                    "-D",
-                    "OUTPUT",
-                    "-p",
-                    "tcp",
-                    "--sport",
-                    &self.sport.to_string(),
-                ])
-                .args([
-                    "--tcp-flags",
-                    "RST",
-                    "RST",
-                    "-m",
-                    "comment",
-                    "--comment",
-                    &tag,
-                    "-j",
-                    "DROP",
-                ])
-                .status();
+        match self.rst_rule.take() {
+            Some(RstRule::Iptables(tag)) => {
+                quiet("iptables", &iptables_rst("-D", self.sport, &tag));
+            }
+            Some(RstRule::Nft(table)) => {
+                quiet("nft", &["delete", "table", "inet", &table]);
+            }
+            None => {}
         }
     }
 }
@@ -404,25 +390,84 @@ fn attach_port_filter(fd: RawFd, sport: u16) -> io::Result<()> {
     }
 }
 
-fn suppress_rst(sport: u16) -> Option<String> {
-    let tag = format!("shabdiz-l2-{sport}");
-    let ok = std::process::Command::new("iptables")
-        .args(["-I", "OUTPUT", "-p", "tcp", "--sport", &sport.to_string()])
-        .args([
-            "--tcp-flags",
-            "RST",
-            "RST",
-            "-m",
-            "comment",
-            "--comment",
-            &tag,
-            "-j",
-            "DROP",
-        ])
+enum RstRule {
+    Iptables(String),
+    Nft(String),
+}
+
+fn quiet<S: AsRef<std::ffi::OsStr>>(cmd: &str, args: &[S]) -> bool {
+    std::process::Command::new(cmd)
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .status()
         .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn nft_load(script: &str) -> bool {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+    let Ok(mut child) = Command::new("nft")
+        .args(["-f", "-"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    let wrote = child
+        .stdin
+        .take()
+        .map(|mut s| s.write_all(script.as_bytes()).is_ok())
         .unwrap_or(false);
-    ok.then_some(tag)
+    child.wait().map(|s| s.success()).unwrap_or(false) && wrote
+}
+
+fn iptables_rst(op: &str, sport: u16, tag: &str) -> Vec<String> {
+    [
+        op,
+        "OUTPUT",
+        "-p",
+        "tcp",
+        "--sport",
+        &sport.to_string(),
+        "--tcp-flags",
+        "RST",
+        "RST",
+        "-m",
+        "comment",
+        "--comment",
+        tag,
+        "-j",
+        "DROP",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+fn suppress_rst(sport: u16) -> Option<RstRule> {
+    let tag = format!("shabdiz-l2-{sport}");
+    if quiet("iptables", &iptables_rst("-I", sport, &tag)) {
+        return Some(RstRule::Iptables(tag));
+    }
+    let table = format!("shabdiz_rst_{sport}");
+    quiet("nft", &["delete", "table", "inet", &table]);
+    let script = format!(
+        "table inet {table} {{\nchain out {{ type filter hook output priority 0; policy accept; \
+         tcp sport {sport} tcp flags & rst == rst drop; }}\n}}\n"
+    );
+    if nft_load(&script) {
+        return Some(RstRule::Nft(table));
+    }
+    tracing::warn!(
+        "shabdiz-l2: could not install a rule dropping the kernel's resets on tcp port {sport} \
+         with iptables or nft; run as root on a host with iptables or nftables"
+    );
+    None
 }
 
 pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
