@@ -503,7 +503,7 @@ pub fn cleanup() {
 
 pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
     let src_ip = src_ip_for(peer)?;
-    let (iface, gw) = default_route()?;
+    let (iface, gw) = route_to(peer)?;
     let ifindex = unsafe {
         let name = std::ffi::CString::new(iface.clone()).map_err(io::Error::other)?;
         libc::if_nametoindex(name.as_ptr()) as i32
@@ -511,10 +511,16 @@ pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
     if ifindex == 0 {
         return Err(io::Error::other(format!("interface {iface} has no index")));
     }
-    let src_mac = parse_mac(&std::fs::read_to_string(format!(
-        "/sys/class/net/{iface}/address"
-    ))?)
-    .ok_or_else(|| io::Error::other("cannot parse the local MAC"))?;
+    let src_mac = std::fs::read_to_string(format!("/sys/class/net/{iface}/address"))
+        .ok()
+        .and_then(|s| parse_mac(&s))
+        .ok_or_else(|| {
+            io::Error::other(format!(
+                "the route to {peer} leaves through {iface}, which has no MAC address (a VPN or \
+                 tunnel?); this carrier writes Ethernet frames, so route {peer} over an Ethernet \
+                 interface"
+            ))
+        })?;
     let mtu: usize = std::fs::read_to_string(format!("/sys/class/net/{iface}/mtu"))?
         .trim()
         .parse()
@@ -527,7 +533,7 @@ pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
             std::thread::sleep(std::time::Duration::from_millis(300));
             arp(gw)
         })
-        .ok_or_else(|| io::Error::other("the gateway's MAC is not in the ARP table"))?;
+        .ok_or_else(|| io::Error::other(format!("the MAC of {gw} is not in the ARP table")))?;
     Ok(Link {
         ifindex,
         mtu,
@@ -546,16 +552,43 @@ fn src_ip_for(peer: Ipv4Addr) -> io::Result<Ipv4Addr> {
     }
 }
 
-fn default_route() -> io::Result<(String, Ipv4Addr)> {
-    for line in std::fs::read_to_string("/proc/net/route")?.lines().skip(1) {
+pub fn pick_route(table: &str, peer: Ipv4Addr) -> Option<(String, Ipv4Addr)> {
+    let want = u32::from(peer);
+    let addr = |s: &str| {
+        u32::from_str_radix(s, 16)
+            .ok()
+            .map(|v| u32::from(Ipv4Addr::from(v.to_le_bytes())))
+    };
+    let mut best: Option<(u32, u32, String, Ipv4Addr)> = None;
+    for line in table.lines().skip(1) {
         let f: Vec<&str> = line.split_whitespace().collect();
-        if f.len() >= 3 && f[1] == "00000000" {
-            if let Ok(g) = u32::from_str_radix(f[2], 16) {
-                return Ok((f[0].to_string(), Ipv4Addr::from(g.to_le_bytes())));
-            }
+        if f.len() < 8 {
+            continue;
+        }
+        let (Some(dest), Some(gw), Some(mask), Ok(metric)) =
+            (addr(f[1]), addr(f[2]), addr(f[7]), f[6].parse::<u32>())
+        else {
+            continue;
+        };
+        if want & mask != dest {
+            continue;
+        }
+        let bits = mask.count_ones();
+        let wins = match &best {
+            None => true,
+            Some((b, m, _, _)) => bits > *b || (bits == *b && metric < *m),
+        };
+        if wins {
+            let hop = if gw == 0 { peer } else { Ipv4Addr::from(gw) };
+            best = Some((bits, metric, f[0].to_string(), hop));
         }
     }
-    Err(io::Error::other("no default route"))
+    best.map(|(_, _, iface, hop)| (iface, hop))
+}
+
+fn route_to(peer: Ipv4Addr) -> io::Result<(String, Ipv4Addr)> {
+    let table = std::fs::read_to_string("/proc/net/route")?;
+    pick_route(&table, peer).ok_or_else(|| io::Error::other(format!("no route to {peer}")))
 }
 
 fn arp(ip: Ipv4Addr) -> Option<[u8; 6]> {
