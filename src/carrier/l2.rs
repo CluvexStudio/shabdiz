@@ -49,7 +49,7 @@ pub struct L2 {
     seq: AtomicU32,
     ip_id: AtomicU32,
     ts: AtomicU32,
-    rst_rule: Option<RstRule>,
+    rst_rule: bool,
     pacer: Pacer,
 }
 
@@ -92,11 +92,7 @@ impl L2 {
             libc::fcntl(raw, libc::F_SETFL, fl | libc::O_NONBLOCK);
         }
 
-        let rst_rule = if opt.suppress_rst {
-            suppress_rst(sport)
-        } else {
-            None
-        };
+        let rst_rule = opt.suppress_rst && suppress_rst(sport);
 
         Ok(L2 {
             fd: unsafe { AsyncFd::register(owned)? },
@@ -301,14 +297,8 @@ impl L2 {
 
 impl Drop for L2 {
     fn drop(&mut self) {
-        match self.rst_rule.take() {
-            Some(RstRule::Iptables(tag)) => {
-                quiet("iptables", &iptables_rst("-D", self.sport, &tag));
-            }
-            Some(RstRule::Nft(table)) => {
-                quiet("nft", &["delete", "table", "inet", &table]);
-            }
-            None => {}
+        if self.rst_rule {
+            release(self.sport);
         }
     }
 }
@@ -449,25 +439,66 @@ fn iptables_rst(op: &str, sport: u16, tag: &str) -> Vec<String> {
     .collect()
 }
 
-fn suppress_rst(sport: u16) -> Option<RstRule> {
+static RULES: std::sync::Mutex<Vec<(u16, RstRule)>> = std::sync::Mutex::new(Vec::new());
+
+fn suppress_rst(sport: u16) -> bool {
     let tag = format!("shabdiz-l2-{sport}");
-    if quiet("iptables", &iptables_rst("-I", sport, &tag)) {
-        return Some(RstRule::Iptables(tag));
+    let rule = if quiet("iptables", &iptables_rst("-I", sport, &tag)) {
+        Some(RstRule::Iptables(tag))
+    } else {
+        let table = format!("shabdiz_rst_{sport}");
+        quiet("nft", &["delete", "table", "inet", &table]);
+        let script = format!(
+            "table inet {table} {{\nchain out {{ type filter hook output priority 0; policy accept; \
+             tcp sport {sport} tcp flags & rst == rst drop; }}\n}}\n"
+        );
+        nft_load(&script).then_some(RstRule::Nft(table))
+    };
+    match rule {
+        Some(rule) => {
+            RULES.lock().unwrap().push((sport, rule));
+            true
+        }
+        None => {
+            tracing::warn!(
+                "shabdiz-l2: could not install a rule dropping the kernel's resets on tcp port \
+                 {sport} with iptables or nft; run as root on a host with iptables or nftables"
+            );
+            false
+        }
     }
-    let table = format!("shabdiz_rst_{sport}");
-    quiet("nft", &["delete", "table", "inet", &table]);
-    let script = format!(
-        "table inet {table} {{\nchain out {{ type filter hook output priority 0; policy accept; \
-         tcp sport {sport} tcp flags & rst == rst drop; }}\n}}\n"
-    );
-    if nft_load(&script) {
-        return Some(RstRule::Nft(table));
+}
+
+fn remove_rule(sport: u16, rule: RstRule) {
+    match rule {
+        RstRule::Iptables(tag) => {
+            quiet("iptables", &iptables_rst("-D", sport, &tag));
+        }
+        RstRule::Nft(table) => {
+            quiet("nft", &["delete", "table", "inet", &table]);
+        }
     }
-    tracing::warn!(
-        "shabdiz-l2: could not install a rule dropping the kernel's resets on tcp port {sport} \
-         with iptables or nft; run as root on a host with iptables or nftables"
-    );
-    None
+}
+
+fn release(sport: u16) {
+    let mine: Vec<(u16, RstRule)> = {
+        let mut rules = RULES.lock().unwrap();
+        let (mine, rest) = std::mem::take(&mut *rules)
+            .into_iter()
+            .partition(|(p, _)| *p == sport);
+        *rules = rest;
+        mine
+    };
+    for (p, rule) in mine {
+        remove_rule(p, rule);
+    }
+}
+
+pub fn cleanup() {
+    let all = std::mem::take(&mut *RULES.lock().unwrap());
+    for (p, rule) in all {
+        remove_rule(p, rule);
+    }
 }
 
 pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
