@@ -461,8 +461,8 @@ fn suppress_rst(sport: u16) -> bool {
         }
         None => {
             tracing::warn!(
-                "shabdiz-l2: could not install a rule dropping the kernel's resets on tcp port \
-                 {sport} with iptables or nft; run as root on a host with iptables or nftables"
+                "shabdiz-l2: neither iptables nor nft worked, so the kernel's resets on tcp \
+                 port {sport} stand and a stateful path will cut this carrier"
             );
             false
         }
@@ -516,9 +516,8 @@ pub fn discover(peer: Ipv4Addr) -> io::Result<Link> {
         .and_then(|s| parse_mac(&s))
         .ok_or_else(|| {
             io::Error::other(format!(
-                "the route to {peer} leaves through {iface}, which has no MAC address (a VPN or \
-                 tunnel?); this carrier writes Ethernet frames, so route {peer} over an Ethernet \
-                 interface"
+                "{iface} has no MAC address, so the route to {peer} leaves through a tunnel; \
+                 this carrier writes Ethernet frames and needs a real interface"
             ))
         })?;
     let mtu: usize = std::fs::read_to_string(format!("/sys/class/net/{iface}/mtu"))?
