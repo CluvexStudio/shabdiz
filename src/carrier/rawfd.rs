@@ -33,6 +33,19 @@ pub fn never_tolerate(_: &io::Error) -> bool {
     false
 }
 
+pub fn is_path_error(e: &io::Error) -> bool {
+    matches!(
+        e.raw_os_error(),
+        Some(libc::ENOPROTOOPT)
+            | Some(libc::EHOSTUNREACH)
+            | Some(libc::ENETUNREACH)
+            | Some(libc::ECONNREFUSED)
+            | Some(libc::ETIMEDOUT)
+            | Some(libc::ENETDOWN)
+            | Some(libc::EPROTO)
+    )
+}
+
 pub fn set_opt(
     fd: RawFd,
     level: libc::c_int,

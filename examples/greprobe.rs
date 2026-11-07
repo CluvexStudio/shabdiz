@@ -1,7 +1,7 @@
 use std::net::Ipv4Addr;
 use std::time::{Duration, Instant};
 
-use shabdiz::carrier::gre::{self, Gre};
+use shabdiz::carrier::gre;
 use shabdiz::carrier::{Batch, Carrier};
 
 #[tokio::main(flavor = "current_thread")]
@@ -22,7 +22,7 @@ async fn main() -> anyhow::Result<()> {
 
     let size: usize = a.get(5).map_or(Ok(1400), |s| s.parse())?;
     let mtu = gre::path_mtu(1500);
-    let gre = Gre::open(peer, local, remote, mtu)?;
+    let gre = gre::open(peer, local, remote, mtu)?;
     println!(
         "gre to {peer} on IP protocol 47 | carrier mtu {mtu} | local {local:02x?} -> {remote:02x?} | \
          up to {} datagrams per syscall",
@@ -51,7 +51,7 @@ fn fill(buf: &mut [u8], n: u64) {
 }
 
 async fn send(
-    gre: &Gre,
+    gre: &gre::Gre,
     count: usize,
     size: usize,
     batch_n: usize,
@@ -92,7 +92,7 @@ async fn send(
     Ok(())
 }
 
-async fn recv(gre: &Gre, size: usize, secs: u64) -> anyhow::Result<()> {
+async fn recv(gre: &gre::Gre, size: usize, secs: u64) -> anyhow::Result<()> {
     let mut batch = Batch::new(64, size.max(64) + 64);
     let (mut got, mut bytes, mut highest, mut reads, mut empty) = (0u64, 0u64, 0u64, 0u64, 0u64);
     let started = Instant::now();
