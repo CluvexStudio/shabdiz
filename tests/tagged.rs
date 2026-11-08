@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use shabdiz::carrier::tagged;
 
 const IPIP: &str = "shabdiz-ipip-tags-v1";

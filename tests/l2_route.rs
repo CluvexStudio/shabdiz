@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use std::net::Ipv4Addr;
 
 use shabdiz::carrier::l2::pick_route;

@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use shabdiz::carrier::esp;
 
 fn received(frame: &[u8]) -> Vec<u8> {

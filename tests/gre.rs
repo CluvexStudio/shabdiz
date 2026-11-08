@@ -1,3 +1,5 @@
+#![cfg(target_os = "linux")]
+
 use shabdiz::carrier::gre;
 
 fn received(frame: &[u8]) -> Vec<u8> {

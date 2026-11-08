@@ -73,3 +73,26 @@ jobs:
           key: ${{ matrix.target }}
 
       - run: cargo zigbuild --release --target ${{ matrix.target }}
+
+  # The raw carriers are Linux-only; everything else (the stream carriers, the
+  # session, the handshake) builds on Windows and macOS. These native runners
+  # prove the crate still compiles and tests there with the raw carriers gated
+  # out.
+  desktop:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+
+      - run: cargo build
+      - run: cargo test
