@@ -10,6 +10,7 @@ pub mod l2;
 pub mod l2frame;
 pub(crate) mod rawfd;
 pub mod rawip;
+pub mod tagged;
 pub mod tcp;
 pub mod udp;
 
