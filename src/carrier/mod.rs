@@ -4,12 +4,19 @@ use std::time::{Duration, Instant};
 
 use async_trait::async_trait;
 
+#[cfg(target_os = "linux")]
 pub mod esp;
+#[cfg(target_os = "linux")]
 pub mod gre;
+#[cfg(target_os = "linux")]
 pub mod l2;
+#[cfg(target_os = "linux")]
 pub mod l2frame;
+#[cfg(target_os = "linux")]
 pub(crate) mod rawfd;
+#[cfg(target_os = "linux")]
 pub mod rawip;
+#[cfg(target_os = "linux")]
 pub mod tagged;
 pub mod tcp;
 pub mod udp;

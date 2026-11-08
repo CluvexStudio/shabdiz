@@ -53,7 +53,10 @@ fn the_payload_never_begins_with_something_a_filter_reads_as_ip() {
 #[test]
 fn the_two_ends_get_different_tags_and_the_same_pair_from_the_same_token() {
     let (a, b) = tagged::tags(b"shared token", IPIP);
-    assert_ne!(a, b, "both ends writing the same tag would read their own traffic");
+    assert_ne!(
+        a, b,
+        "both ends writing the same tag would read their own traffic"
+    );
     assert_eq!((a, b), tagged::tags(b"shared token", IPIP));
     assert_ne!(
         (a, b),
