@@ -1,10 +1,21 @@
+#[cfg(target_os = "linux")]
 use std::net::Ipv4Addr;
+#[cfg(target_os = "linux")]
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "linux")]
 use shabdiz::carrier::gre;
+#[cfg(target_os = "linux")]
 use shabdiz::carrier::{Batch, Carrier};
 
+#[cfg(not(target_os = "linux"))]
+fn main() {
+    eprintln!("examples/greprobe.rs is a Linux-only raw-carrier probe");
+}
+
+#[cfg(target_os = "linux")]
 #[tokio::main(flavor = "current_thread")]
+#[cfg(target_os = "linux")]
 async fn main() -> anyhow::Result<()> {
     let a: Vec<String> = std::env::args().collect();
     if a.len() < 4 {
@@ -43,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+#[cfg(target_os = "linux")]
 fn fill(buf: &mut [u8], n: u64) {
     buf[..8].copy_from_slice(&n.to_be_bytes());
     for (i, b) in buf.iter_mut().enumerate().skip(8) {
@@ -50,6 +62,7 @@ fn fill(buf: &mut [u8], n: u64) {
     }
 }
 
+#[cfg(target_os = "linux")]
 async fn send(
     gre: &gre::Gre,
     count: usize,
@@ -92,6 +105,7 @@ async fn send(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 async fn recv(gre: &gre::Gre, size: usize, secs: u64) -> anyhow::Result<()> {
     let mut batch = Batch::new(64, size.max(64) + 64);
     let (mut got, mut bytes, mut highest, mut reads, mut empty) = (0u64, 0u64, 0u64, 0u64, 0u64);
