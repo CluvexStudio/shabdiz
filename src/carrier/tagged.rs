@@ -42,15 +42,7 @@ impl Shape for TaggedShape {
     }
 }
 
-pub fn open_ipip(peer: Ipv4Addr, local: u32, peer_tag: u32, mtu: usize) -> io::Result<Tagged> {
-    open(libc::IPPROTO_IPIP, "ipip", peer, local, peer_tag, mtu)
-}
-
-pub fn open_sit(peer: Ipv4Addr, local: u32, peer_tag: u32, mtu: usize) -> io::Result<Tagged> {
-    open(libc::IPPROTO_IPV6, "6to4", peer, local, peer_tag, mtu)
-}
-
-fn open(
+pub fn open(
     proto: libc::c_int,
     name: &str,
     peer: Ipv4Addr,
