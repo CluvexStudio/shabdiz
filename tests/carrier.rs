@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use shabdiz::carrier::{l2frame, tcp::Tcp, udp::Udp, Batch, Carrier, Pacer, BATCH, SAFE_BURST};
+#[cfg(target_os = "linux")]
+use shabdiz::carrier::l2frame;
+use shabdiz::carrier::{tcp::Tcp, udp::Udp, Batch, Carrier, Pacer, BATCH, SAFE_BURST};
 
 #[test]
 fn a_batch_keeps_its_datagrams_whole_and_in_order() {
@@ -291,6 +293,7 @@ async fn the_udp_carrier_round_trips_and_reports_its_offload() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn a_crafted_frame_carries_its_payload_with_valid_checksums() {
     let f = l2frame::Frame {
         src_mac: [0x52, 0x54, 0, 1, 2, 3],
@@ -331,6 +334,7 @@ fn a_crafted_frame_carries_its_payload_with_valid_checksums() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn an_offloaded_frame_leaves_the_checksum_for_the_kernel_to_finish() {
     let f = l2frame::Frame {
         src_mac: [0; 6],
