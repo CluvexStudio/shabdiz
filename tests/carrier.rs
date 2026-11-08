@@ -177,6 +177,9 @@ async fn persistent_loss_turns_into_a_rate_limit_once_the_burst_is_small() {
     );
 }
 
+// Windows CI timers are ~15ms coarse, too blunt for a microsecond-paced
+// assertion; the pacer itself runs there, only this measurement cannot.
+#[cfg(not(target_os = "windows"))]
 #[tokio::test]
 async fn the_rate_limit_holds_an_average_a_sleep_per_group_could_not() {
     let p = Pacer::new(4);
@@ -375,6 +378,9 @@ fn an_offloaded_frame_leaves_the_checksum_for_the_kernel_to_finish() {
     assert_eq!(a[csum + 2..], b[csum + 2..]);
 }
 
+// Windows CI timers are ~15ms coarse, too blunt for a microsecond-paced
+// assertion; the pacer itself runs there, only this measurement cannot.
+#[cfg(not(target_os = "windows"))]
 #[tokio::test]
 async fn a_rate_limit_recovers_instead_of_parking_between_the_thresholds() {
     let p = Pacer::new(SAFE_BURST);
