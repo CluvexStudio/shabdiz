@@ -222,7 +222,7 @@ impl Carrier for L2 {
         let mut n = 0;
         if self.offload {
             for range in batch.groups(self.pacer.burst()) {
-                self.pacer.admit(range.1 - range.0).await;
+                let _ = self.pacer.admit(range.1 - range.0).await;
                 let shaped = batch
                     .group_payload(range, &mut scratch)
                     .filter(|(seg, payload)| {

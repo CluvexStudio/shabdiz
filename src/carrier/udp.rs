@@ -175,7 +175,7 @@ impl Carrier for Udp {
         let burst = self.pacer.burst().min(self.gso.max(1));
         let mut n = 0;
         for range in batch.groups(burst) {
-            self.pacer.admit(range.1 - range.0).await;
+            let _ = self.pacer.admit(range.1 - range.0).await;
             let shaped = batch
                 .group_payload(range, &mut scratch)
                 .filter(|(seg, payload)| {

@@ -1,5 +1,5 @@
 use std::io;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use super::rawfd;
 use super::rawip::{RawIp, Shape};
@@ -26,6 +26,7 @@ pub fn macs(token: &[u8]) -> ([u8; 6], [u8; 6]) {
 pub struct GreShape {
     local_mac: [u8; 6],
     peer_mac: [u8; 6],
+    bare: bool,
 }
 
 impl Shape for GreShape {
@@ -38,7 +39,11 @@ impl Shape for GreShape {
     }
 
     fn parse<'a>(&self, pkt: &'a [u8]) -> Option<&'a [u8]> {
-        payload(pkt, self.local_mac)
+        if self.bare {
+            after_ip(pkt, self.local_mac)
+        } else {
+            payload(pkt, self.local_mac)
+        }
     }
 }
 
@@ -50,6 +55,21 @@ pub fn open(peer: Ipv4Addr, local_mac: [u8; 6], peer_mac: [u8; 6], mtu: usize) -
         GreShape {
             local_mac,
             peer_mac,
+            bare: false,
+        },
+        mtu,
+    )
+}
+
+pub fn open6(peer: Ipv6Addr, local_mac: [u8; 6], peer_mac: [u8; 6], mtu: usize) -> io::Result<Gre> {
+    RawIp::open6(
+        libc::IPPROTO_GRE,
+        "gre6",
+        peer,
+        GreShape {
+            local_mac,
+            peer_mac,
+            bare: true,
         },
         mtu,
     )
@@ -66,7 +86,10 @@ pub fn frame(dst_mac: [u8; 6], src_mac: [u8; 6], datagram: &[u8], out: &mut [u8]
 
 pub fn payload(pkt: &[u8], local_mac: [u8; 6]) -> Option<&[u8]> {
     let ihl = usize::from(*pkt.first()? & 0x0f) * 4;
-    let b = pkt.get(ihl.max(20)..)?;
+    after_ip(pkt.get(ihl.max(20)..)?, local_mac)
+}
+
+pub fn after_ip(b: &[u8], local_mac: [u8; 6]) -> Option<&[u8]> {
     if b.len() <= HDR || b[..4] != GRE_HDR {
         return None;
     }
@@ -78,6 +101,10 @@ pub fn payload(pkt: &[u8], local_mac: [u8; 6]) -> Option<&[u8]> {
 
 pub fn path_mtu(path: usize) -> usize {
     path.saturating_sub(20 + HDR)
+}
+
+pub fn path_mtu6(path: usize) -> usize {
+    path.saturating_sub(40 + HDR)
 }
 
 pub fn is_path_error(e: &io::Error) -> bool {

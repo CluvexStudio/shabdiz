@@ -1,5 +1,5 @@
 use std::io;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, Ipv6Addr};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use tokio::io::unix::AsyncFd;
 
 use super::rawfd::{self, Side};
+use super::txtime;
 use super::{Batch, Carrier, Pacer, BATCH};
 
 pub const MAX_FRAME: usize = 2048;
@@ -30,16 +31,33 @@ pub struct RawIp<S> {
     pacer: Pacer,
     foreign: AtomicU64,
     icmp: AtomicU64,
+    kernel_paced: bool,
+}
+
+fn raw_socket(family: libc::c_int, proto: libc::c_int, name: &str) -> io::Result<OwnedFd> {
+    let raw = unsafe { libc::socket(family, libc::SOCK_RAW | libc::SOCK_NONBLOCK, proto) };
+    if raw < 0 {
+        let e = io::Error::last_os_error();
+        return Err(io::Error::new(
+            e.kind(),
+            format!("opening a raw {name} socket ({e}) — this carrier needs CAP_NET_RAW"),
+        ));
+    }
+    let fd = unsafe { OwnedFd::from_raw_fd(raw) };
+    rawfd::set_opt(fd.as_raw_fd(), libc::SOL_SOCKET, libc::SO_RCVBUF, RECV_BUF)?;
+    Ok(fd)
+}
+
+fn fix_peer(fd: &OwnedFd, sa: *const libc::sockaddr, len: usize) -> io::Result<()> {
+    let r = unsafe { libc::connect(fd.as_raw_fd(), sa, len as libc::socklen_t) };
+    if r < 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(())
 }
 
 impl<S: Shape> RawIp<S> {
-    pub fn open(
-        proto: libc::c_int,
-        name: &str,
-        peer: Ipv4Addr,
-        shape: S,
-        mtu: usize,
-    ) -> io::Result<RawIp<S>> {
+    fn room(name: &str, shape: &S, mtu: usize) -> io::Result<()> {
         let hdr = shape.hdr();
         if mtu + hdr > MAX_FRAME {
             return Err(io::Error::new(
@@ -50,17 +68,31 @@ impl<S: Shape> RawIp<S> {
                 ),
             ));
         }
-        let raw =
-            unsafe { libc::socket(libc::AF_INET, libc::SOCK_RAW | libc::SOCK_NONBLOCK, proto) };
-        if raw < 0 {
-            let e = io::Error::last_os_error();
-            return Err(io::Error::new(
-                e.kind(),
-                format!("opening a raw {name} socket ({e}) — this carrier needs CAP_NET_RAW"),
-            ));
-        }
-        let fd = unsafe { OwnedFd::from_raw_fd(raw) };
-        rawfd::set_opt(fd.as_raw_fd(), libc::SOL_SOCKET, libc::SO_RCVBUF, RECV_BUF)?;
+        Ok(())
+    }
+
+    fn wrap(fd: OwnedFd, shape: S, mtu: usize) -> io::Result<RawIp<S>> {
+        let kernel_paced = txtime::enable(fd.as_raw_fd());
+        Ok(RawIp {
+            fd: unsafe { AsyncFd::register(fd)? },
+            shape,
+            mtu,
+            pacer: Pacer::new(BATCH),
+            foreign: AtomicU64::new(0),
+            icmp: AtomicU64::new(0),
+            kernel_paced,
+        })
+    }
+
+    pub fn open(
+        proto: libc::c_int,
+        name: &str,
+        peer: Ipv4Addr,
+        shape: S,
+        mtu: usize,
+    ) -> io::Result<RawIp<S>> {
+        Self::room(name, &shape, mtu)?;
+        let fd = raw_socket(libc::AF_INET, proto, name)?;
         let _ = rawfd::set_opt(
             fd.as_raw_fd(),
             libc::IPPROTO_IP,
@@ -75,24 +107,44 @@ impl<S: Shape> RawIp<S> {
             },
             sin_zero: [0; 8],
         };
-        let r = unsafe {
-            libc::connect(
-                fd.as_raw_fd(),
-                &sa as *const _ as *const libc::sockaddr,
-                std::mem::size_of::<libc::sockaddr_in>() as libc::socklen_t,
-            )
+        fix_peer(
+            &fd,
+            &sa as *const _ as *const libc::sockaddr,
+            std::mem::size_of::<libc::sockaddr_in>(),
+        )?;
+        Self::wrap(fd, shape, mtu)
+    }
+
+    pub fn open6(
+        proto: libc::c_int,
+        name: &str,
+        peer: Ipv6Addr,
+        shape: S,
+        mtu: usize,
+    ) -> io::Result<RawIp<S>> {
+        Self::room(name, &shape, mtu)?;
+        let fd = raw_socket(libc::AF_INET6, proto, name)?;
+        let _ = rawfd::set_opt(
+            fd.as_raw_fd(),
+            libc::IPPROTO_IPV6,
+            libc::IPV6_MTU_DISCOVER,
+            libc::IPV6_PMTUDISC_DO,
+        );
+        let sa = libc::sockaddr_in6 {
+            sin6_family: libc::AF_INET6 as libc::sa_family_t,
+            sin6_port: 0,
+            sin6_flowinfo: 0,
+            sin6_addr: libc::in6_addr {
+                s6_addr: peer.octets(),
+            },
+            sin6_scope_id: 0,
         };
-        if r < 0 {
-            return Err(io::Error::last_os_error());
-        }
-        Ok(RawIp {
-            fd: unsafe { AsyncFd::register(fd)? },
-            shape,
-            mtu,
-            pacer: Pacer::new(BATCH),
-            foreign: AtomicU64::new(0),
-            icmp: AtomicU64::new(0),
-        })
+        fix_peer(
+            &fd,
+            &sa as *const _ as *const libc::sockaddr,
+            std::mem::size_of::<libc::sockaddr_in6>(),
+        )?;
+        Self::wrap(fd, shape, mtu)
     }
 
     pub fn pacer(&self) -> &Pacer {
@@ -133,23 +185,14 @@ impl<S: Shape> RawIp<S> {
         .await
     }
 
-    async fn send_group(&self, scratch: &[u8], lens: &[usize]) -> io::Result<usize> {
+    async fn send_group(
+        &self,
+        scratch: &[u8],
+        lens: &[usize],
+        plan: Option<(u64, u64)>,
+    ) -> io::Result<usize> {
         rawfd::retry(&self.fd, Side::Write, self.survive_icmp(), |fd| {
-            let mut iov: [libc::iovec; BATCH] = unsafe { std::mem::zeroed() };
-            let mut msgs: [libc::mmsghdr; BATCH] = unsafe { std::mem::zeroed() };
-            let mut at = 0;
-            for (i, &len) in lens.iter().enumerate() {
-                iov[i] = libc::iovec {
-                    iov_base: scratch[at..].as_ptr() as *mut libc::c_void,
-                    iov_len: len,
-                };
-                msgs[i].msg_hdr.msg_iov = &mut iov[i];
-                msgs[i].msg_hdr.msg_iovlen = 1;
-                at += len;
-            }
-            rawfd::count(unsafe {
-                libc::sendmmsg(fd, msgs.as_mut_ptr(), lens.len() as u32, 0) as isize
-            })
+            rawfd::count(unsafe { txtime::send_group_at(fd, scratch, lens, plan) })
         })
         .await
     }
@@ -219,6 +262,10 @@ impl<S: Shape> Carrier for RawIp<S> {
         BATCH
     }
 
+    fn kernel_paced(&self) -> bool {
+        self.kernel_paced
+    }
+
     fn pacer(&self) -> Option<&Pacer> {
         Some(&self.pacer)
     }
@@ -232,7 +279,12 @@ impl<S: Shape> Carrier for RawIp<S> {
         let mut lens: Vec<usize> = Vec::with_capacity(BATCH);
         let mut sent = 0;
         for range in batch.groups(self.pacer.burst()) {
-            self.pacer.admit(range.1 - range.0).await;
+            let lead = self.pacer.admit(range.1 - range.0).await;
+            let plan = if self.kernel_paced {
+                txtime::schedule(lead, range.1 - range.0)
+            } else {
+                None
+            };
             lens.clear();
             let mut at = 0;
             for i in range.0..range.1 {
@@ -244,7 +296,7 @@ impl<S: Shape> Carrier for RawIp<S> {
             if lens.is_empty() {
                 continue;
             }
-            sent += self.send_group(&scratch[..at], &lens).await?;
+            sent += self.send_group(&scratch[..at], &lens, plan).await?;
         }
         Ok(sent)
     }

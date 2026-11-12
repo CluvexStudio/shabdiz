@@ -19,6 +19,8 @@ pub mod rawip;
 #[cfg(target_os = "linux")]
 pub mod tagged;
 pub mod tcp;
+#[cfg(target_os = "linux")]
+mod txtime;
 pub mod udp;
 
 pub const BATCH: usize = 32;
@@ -50,6 +52,10 @@ pub trait Carrier: Send + Sync {
 
     fn batch_size(&self) -> usize {
         1
+    }
+
+    fn kernel_paced(&self) -> bool {
+        false
     }
 
     fn pacer(&self) -> Option<&Pacer> {
@@ -140,12 +146,12 @@ impl Pacer {
         (self.sent.load(Relaxed) * 1_000_000 / elapsed) as usize
     }
 
-    pub async fn admit(&self, datagrams: usize) {
+    pub async fn admit(&self, datagrams: usize) -> Option<u64> {
         self.sent.fetch_add(datagrams as u64, Relaxed);
         let rate = self.rate_pps.load(Relaxed) as u64;
         let gap = self.gap_us.load(Relaxed) as u64;
         if rate == 0 && gap == 0 {
-            return;
+            return None;
         }
         let by_rate = (datagrams as u64 * 1_000_000)
             .checked_div(rate)
@@ -160,6 +166,11 @@ impl Pacer {
         };
         if wait >= SLEEP_FLOOR_US {
             tokio::time::sleep(Duration::from_micros(wait)).await;
+            return None;
+        }
+        match wait {
+            0 => None,
+            us => Some(us * 1_000),
         }
     }
 
