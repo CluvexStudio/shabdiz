@@ -3,13 +3,13 @@
 </p>
 
 <p align="center">
-  <b>English</b> · <a href="README.fa.md">فارسی</a>
+  <b>English</b> &nbsp;|&nbsp; <a href="README.fa.md">فارسی</a>
 </p>
 
-# shabdiz
+# Shabdiz
 
 A datagram protocol in Rust, for networks that fight back. It carries unreliable datagrams end to
-end — and reliable streams for the traffic that needs them — over whichever carrier the network
+end (and reliable streams for the traffic that needs them) over whichever carrier the network
 still lets through. Use it directly between two programs, or as the thing a tunnel runs on.
 
 ## How a session crosses
@@ -27,7 +27,7 @@ still lets through. Use it directly between two programs, or as the thing a tunn
 ## What it is
 
 **Nothing waits in line.** A datagram is sent and forgotten. One that goes missing costs that
-datagram and nothing behind it — which is the whole reason a reliable, ordered transport is the
+datagram and nothing behind it, which is the whole reason a reliable, ordered transport is the
 wrong thing to carry traffic that is already reliable and ordered.
 
 **Reliability where it is asked for, and nowhere else.** A stream that must arrive gets its own
@@ -39,7 +39,7 @@ one of them is a config change rather than a rewrite.
 
 **Loss measured, not estimated.** Every datagram carries a counter. A gap in it is a lost
 datagram, so each side learns what the path is doing to it without a probe, a timer or an extra
-byte — and tells the other, because only a receiver can see what a direction loses.
+byte, and tells the other, because only a receiver can see what a direction loses.
 
 **Shaped, not throttled.** The protocol never decides how much to send: whatever rides on it
 already has a congestion controller, and two of them fight. What it does decide is the shape of
